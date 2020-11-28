@@ -48,7 +48,8 @@ def fetchTopStories(fetchHistory):
 
         story = {
             "id": json["id"],
-            "title": json["title"]
+            "title": json["title"],
+            "loadedFromHist": False
         }
 
         story["url"] = ""
@@ -57,12 +58,13 @@ def fetchTopStories(fetchHistory):
 
         processedStories.append(story)
 
-    writeToHistoryFile(processedStories)
+    writeToHistoryFile(list(filter(lambda s: s["loadedFromHist"] == False, processedStories)))
 
     return processedStories
 
 
-def getStoryFromHistory(storyID, history):
+def getStoryFromHistory(storyID: int, history):
+    """ Fetches a specific story from the history. Returns None if not found """
     for h in history:
         if h["id"] == storyID:
             return h
@@ -81,6 +83,7 @@ def isStoryInHistory(storyID, history):
 # Loads stories from the history file.
 # Returns a list of story objects
 def loadFromHistoryFile():
+    """ Loads all stories from the history file """
     loadedStories = []
     with open('./stories.history', 'r') as historyFile:
         for line in historyFile:
@@ -89,13 +92,15 @@ def loadFromHistoryFile():
                 continue
 
             tokens = line.split(";")
-            story = {"id": int(tokens[0]), "url": tokens[2], "title": tokens[1]}
+            story = {"loadedFromHist": True, "id": int(tokens[0]), "url": tokens[2], "title": tokens[1]}
             loadedStories.append(story)
 
     return loadedStories
 
 
 def writeToHistoryFile(stories):
+    """ Writes the passed list of stories to a file concverting ist fields into csv format """
+
     with open('./stories.history', 'a') as historyFile:
         for story in stories:
             storyID = str(story["id"])
@@ -107,14 +112,17 @@ def writeToHistoryFile(stories):
 
 # fetch the story with passed id and open its url in the browser
 def openInBrowser(itemID):
+    """
+        Opens the passed story id in the browser
+        Tries to first load the story from the history. If not present in
+        history, will reach out to the hn service
+    """
     storiesFromHistory = loadFromHistoryFile()
     urlToLoad = ""
-    for story in storiesFromHistory:
-        if story["id"] is itemID:
-            urlToLoad = story["url"]
-            break
-
-    if urlToLoad is "":
+    story = getStoryFromHistory(itemID, storiesFromHistory)
+    print(story)
+    if story is not None and urlToLoad is "":
+        print('from hist')
         item = fetchStory(itemID)
         urlToLoad = item["url"]
 
@@ -126,7 +134,8 @@ if len(options) == 0:
     stories = fetchTopStories(loadFromHistoryFile())
     cons = Console()
     for story in stories:
-        text = Text(str(story["id"]), style="magenta")
+        color = "green" if story["loadedFromHist"] == True else "magenta"
+        text = Text(str(story["id"]), style=color)
         text.append(f' {story["title"]}', style="yellow")
 
         cons.print(text)
@@ -136,4 +145,4 @@ if len(options) == 0:
 command = options[0]
 
 if command == "open":
-    openInBrowser(options[1])
+    openInBrowser(int(options[1]))
