@@ -4,14 +4,24 @@ import sys
 import requests
 import webbrowser
 from rich.console import Console
+from rich.emoji import Emoji
 from rich.text import Text
 
 from hnconfig import config
+
+from dataclasses import dataclass
 
 options = sys.argv[1:]
 
 topStories = " https://hacker-news.firebaseio.com/v0/topstories.json?print=pretty"
 itemBaseURL = " https://hacker-news.firebaseio.com/v0/item/"
+
+
+@dataclass
+class Story:
+    url: str = ''
+    id: int = ''
+    loadedFromHist: bool = False
 
 
 def exitPeacefully():
@@ -65,6 +75,7 @@ def fetchTopStories(fetchHistory):
 
 def getStoryFromHistory(storyID: int, history):
     """ Fetches a specific story from the history. Returns None if not found """
+
     for h in history:
         if h["id"] == storyID:
             return h
@@ -84,6 +95,7 @@ def isStoryInHistory(storyID, history):
 # Returns a list of story objects
 def loadFromHistoryFile():
     """ Loads all stories from the history file """
+
     loadedStories = []
     with open('./stories.history', 'r') as historyFile:
         for line in historyFile:
@@ -136,6 +148,8 @@ if len(options) == 0:
     for story in stories:
         color = "green" if story["loadedFromHist"] == True else "magenta"
         text = Text(str(story["id"]), style=color)
+        if story["url"] is not "":
+            text = text.append(" \U0001f517")
         text.append(f' {story["title"]}', style="yellow")
 
         cons.print(text)
