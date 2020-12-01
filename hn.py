@@ -4,8 +4,8 @@ import sys
 import requests
 import webbrowser
 from rich.console import Console
-from rich.emoji import Emoji
 from rich.text import Text
+from rich.markdown import Markdown
 
 from hnconfig import config
 
@@ -22,6 +22,8 @@ class Story:
     url: str = ''
     id: int = ''
     loadedFromHist: bool = False
+    openCount: int = 0
+    title: str = ''
 
 
 def exitPeacefully():
@@ -45,9 +47,6 @@ def fetchTopStories(fetchHistory):
     processedStories = []
     history = loadFromHistoryFile()
     for itemID in idsToProcess:
-        # check on wier die Storyid schon geladen haben. Wenn ja, nimm
-        # die Story aus der History
-
         storyFromHistory = getStoryFromHistory(itemID, history)
         if storyFromHistory is not None:
             processedStories.append(storyFromHistory)
@@ -56,19 +55,15 @@ def fetchTopStories(fetchHistory):
         itemResponse = requests.get(f'{itemBaseURL}/{itemID}/.json')
         json = itemResponse.json()
 
-        story = {
-            "id": json["id"],
-            "title": json["title"],
-            "loadedFromHist": False
-        }
+        story = Story(url=json["url"], title=json["title"], loadedFromHist=False, id=json["id"])
 
-        story["url"] = ""
         if "url" in json:
-            story["url"] = json["url"]
+            story.url = json["url"]
 
         processedStories.append(story)
 
-    writeToHistoryFile(list(filter(lambda s: s["loadedFromHist"] == False, processedStories)))
+    # Stories already loaded from the history are not rewritten to ti
+    writeToHistoryFile(list(filter(lambda s: s.loadedFromHist is False, processedStories)))
 
     return processedStories
 
@@ -77,7 +72,7 @@ def getStoryFromHistory(storyID: int, history):
     """ Fetches a specific story from the history. Returns None if not found """
 
     for h in history:
-        if h["id"] == storyID:
+        if h.id == storyID:
             return h
 
     return None
@@ -104,7 +99,7 @@ def loadFromHistoryFile():
                 continue
 
             tokens = line.split(";")
-            story = {"loadedFromHist": True, "id": int(tokens[0]), "url": tokens[2], "title": tokens[1]}
+            story = Story(url=tokens[2], loadedFromHist=True, id=int(tokens[0]), title=tokens[1])
             loadedStories.append(story)
 
     return loadedStories
@@ -115,15 +110,11 @@ def writeToHistoryFile(stories):
 
     with open('./stories.history', 'a') as historyFile:
         for story in stories:
-            storyID = str(story["id"])
-            title = story["title"]
-            url = story["url"]
-
-            historyFile.write(f'{storyID};{title};{url}\n')
+            historyFile.write(f'{story.id};{story.title};{story.url}\n')
 
 
 # fetch the story with passed id and open its url in the browser
-def openInBrowser(itemID):
+def openInBrowser(itemID: int):
     """
         Opens the passed story id in the browser
         Tries to first load the story from the history. If not present in
@@ -132,25 +123,37 @@ def openInBrowser(itemID):
     storiesFromHistory = loadFromHistoryFile()
     urlToLoad = ""
     story = getStoryFromHistory(itemID, storiesFromHistory)
-    print(story)
-    if story is not None and urlToLoad is "":
-        print('from hist')
+    if story is None:
         item = fetchStory(itemID)
-        urlToLoad = item["url"]
+        urlToLoad = item.url
+    else:
+        urlToLoad = story.url
 
+    print(urlToLoad)
     webbrowser.open_new_tab(urlToLoad)
     exitPeacefully()
+
+
+def printStoriesWithRich(stories, cons):
+    for story in stories:
+        color = "green" if story.loadedFromHist is True else "magenta"
+        text = Text(str(story.id), style=color)
+        if story.url is not "":
+            text = text.append(" \U0001f517")
+        text.append(f' {story.title}', style="yellow")
+
+        cons.print(text)
 
 
 if len(options) == 0:
     stories = fetchTopStories(loadFromHistoryFile())
     cons = Console()
     for story in stories:
-        color = "green" if story["loadedFromHist"] == True else "magenta"
-        text = Text(str(story["id"]), style=color)
-        if story["url"] is not "":
+        color = "green" if story.loadedFromHist is True else "magenta"
+        text = Text(str(story.id), style=color)
+        if story.url is not "":
             text = text.append(" \U0001f517")
-        text.append(f' {story["title"]}', style="yellow")
+        text.append(f' {story.title}', style="yellow")
 
         cons.print(text)
 
@@ -160,3 +163,9 @@ command = options[0]
 
 if command == "open":
     openInBrowser(int(options[1]))
+elif command == "lh":
+    cons = Console()
+    cons.print(Markdown("## From History"))
+    stories = loadFromHistoryFile()
+    printStoriesWithRich(stories[:config.n], cons)
+
