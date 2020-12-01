@@ -55,7 +55,7 @@ def fetchTopStories(fetchHistory):
         itemResponse = requests.get(f'{itemBaseURL}/{itemID}/.json')
         json = itemResponse.json()
 
-        story = Story(url=json["url"], title=json["title"], loadedFromHist=False, id=json["id"])
+        story = Story(title=json["title"], loadedFromHist=False, id=json["id"])
 
         if "url" in json:
             story.url = json["url"]

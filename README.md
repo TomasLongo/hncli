@@ -14,6 +14,8 @@ A simple invocation of `hn.py` fetches the latest 20 top stories. To tweak how m
 
 The stories are printed as a list, showing the id, the title, and a little marker telling if the story is an external link.
 
+![Fechting the latest top stories](readme-assets/fetch-stories.png)
+
 ### Open a story in the browser
 
 `hn.py` outputs the story-id of every fetched story. To open a story in the browser use the `open` command with a story id
