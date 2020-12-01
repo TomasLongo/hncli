@@ -94,23 +94,31 @@ def loadFromHistoryFile():
     loadedStories = []
     with open('./stories.history', 'r') as historyFile:
         for line in historyFile:
-            stripped = line.strip()
+            stripped = line.strip('\n ')
             if stripped == "":
                 continue
 
             tokens = line.split(";")
-            story = Story(url=tokens[2], loadedFromHist=True, id=int(tokens[0]), title=tokens[1])
+            if len(tokens) != 4:
+                print(f'Error reading line in historyFile')
+
+            story = Story(url=tokens[2].rstrip(),
+                          loadedFromHist=True,
+                          id=int(tokens[0]),
+                          title=tokens[1],
+                          openCount=int(tokens[3]))
+
             loadedStories.append(story)
 
     return loadedStories
 
 
 def writeToHistoryFile(stories):
-    """ Writes the passed list of stories to a file concverting ist fields into csv format """
+    """ Appends the passed list of stories to a file concverting ist fields into csv format """
 
     with open('./stories.history', 'a') as historyFile:
         for story in stories:
-            historyFile.write(f'{story.id};{story.title};{story.url}\n')
+            historyFile.write(f'{story.id};{story.title};{story.url};{story.openCount}\n')
 
 
 # fetch the story with passed id and open its url in the browser
@@ -128,10 +136,25 @@ def openInBrowser(itemID: int):
         urlToLoad = item.url
     else:
         urlToLoad = story.url
+        incrementOpenCountInHistory(story.id)
 
     print(urlToLoad)
     webbrowser.open_new_tab(urlToLoad)
     exitPeacefully()
+
+
+def overwriteHistoryFile(stories):
+    """ Replaces the history file with the passed stories """
+    with open('./stories.history', 'w') as historyFile:
+        for story in stories:
+            historyFile.write(f'{story.id};{story.title};{story.url};{story.openCount}\n')
+
+
+def incrementOpenCountInHistory(storyID: int):
+    stories = loadFromHistoryFile()
+    story = getStoryFromHistory(storyID, stories)
+    story.openCount = story.openCount + 1
+    overwriteHistoryFile(stories)
 
 
 def printStoriesWithRich(stories, cons):
