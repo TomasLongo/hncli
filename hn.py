@@ -1,6 +1,7 @@
 #! /usr/bin/python3
 
 import sys
+import os
 import requests
 import webbrowser
 from rich.console import Console
@@ -15,6 +16,30 @@ options = sys.argv[1:]
 
 topStories = " https://hacker-news.firebaseio.com/v0/topstories.json?print=pretty"
 itemBaseURL = " https://hacker-news.firebaseio.com/v0/item/"
+
+
+def checkHistfileAndCreateIfNeccessary(config):
+    """
+        Checks if the historyfile exists. If not construct it.
+        Returns the path to the histfile
+    """
+    base = config.histfileBase
+    if "~" in base:
+        base = os.path.expanduser(base)
+
+    histPath = os.path.join(base, config.histfileName)
+    if os.path.isfile(histPath) is False:
+        try:
+            os.mkdir(base)
+            hf = open(histPath, 'w')
+            hf.close()
+        except FileExistsError:
+            print(f'{histPath} already exists')
+
+    return histPath
+
+
+histFilePath = checkHistfileAndCreateIfNeccessary(config)
 
 
 @dataclass
@@ -92,7 +117,7 @@ def loadFromHistoryFile():
     """ Loads all stories from the history file """
 
     loadedStories = []
-    with open('./stories.history', 'r') as historyFile:
+    with open(histFilePath, 'r') as historyFile:
         for line in historyFile:
             stripped = line.strip('\n ')
             if stripped == "":
@@ -116,7 +141,7 @@ def loadFromHistoryFile():
 def writeToHistoryFile(stories):
     """ Appends the passed list of stories to a file concverting ist fields into csv format """
 
-    with open('./stories.history', 'a') as historyFile:
+    with open(histFilePath, 'a') as historyFile:
         for story in stories:
             historyFile.write(f'{story.id};{story.title};{story.url};{story.openCount}\n')
 
@@ -145,7 +170,7 @@ def openInBrowser(itemID: int):
 
 def overwriteHistoryFile(stories):
     """ Replaces the history file with the passed stories """
-    with open('./stories.history', 'w') as historyFile:
+    with open(histFilePath, 'w') as historyFile:
         for story in stories:
             historyFile.write(f'{story.id};{story.title};{story.url};{story.openCount}\n')
 
