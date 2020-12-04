@@ -4,8 +4,9 @@ from dataclasses import dataclass
 @dataclass
 class HnConfig:
     n: int = 20
-    histfileBase: str = "~/hnclient"
-    histfileName: str = "stories.history"
+
+    # absolute path to historyfile
+    histfile: str = "~/hnclient/stories.history"
 
 
 config = HnConfig()

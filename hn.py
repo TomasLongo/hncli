@@ -1,7 +1,6 @@
 #! /usr/bin/python3
 
 import sys
-import os
 import requests
 import webbrowser
 import asyncio
@@ -13,46 +12,16 @@ from rich.text import Text
 from rich.markdown import Markdown
 
 from hnconfig import config
+from history import History
+from story import Story
 
-from dataclasses import dataclass
 
 options = sys.argv[1:]
 
 topStories = " https://hacker-news.firebaseio.com/v0/topstories.json?print=pretty"
 itemBaseURL = " https://hacker-news.firebaseio.com/v0/item/"
 
-
-def checkHistfileAndCreateIfNeccessary(config):
-    """
-        Checks if the historyfile exists. If not construct it.
-        Returns the path to the histfile
-    """
-    base = config.histfileBase
-    if "~" in base:
-        base = os.path.expanduser(base)
-
-    histPath = os.path.join(base, config.histfileName)
-    if os.path.isfile(histPath) is False:
-        try:
-            os.mkdir(base)
-            hf = open(histPath, 'w')
-            hf.close()
-        except FileExistsError:
-            print(f'{histPath} already exists')
-
-    return histPath
-
-
-histFilePath = checkHistfileAndCreateIfNeccessary(config)
-
-
-@dataclass
-class Story:
-    url: str = ''
-    id: int = ''
-    loadedFromHist: bool = False
-    openCount: int = 0
-    title: str = ''
+history = History(config)
 
 
 def exitPeacefully():
@@ -74,9 +43,8 @@ def fetchTopStories(fetchHistory):
 
     idsToProcess = itemIDs[:config.n]
     processedStories = []
-    history = loadFromHistoryFile()
     for itemID in idsToProcess:
-        storyFromHistory = getStoryFromHistory(itemID, history)
+        storyFromHistory = history.getStory(itemID)
         if storyFromHistory is not None:
             processedStories.append(storyFromHistory)
             continue
@@ -92,12 +60,14 @@ def fetchTopStories(fetchHistory):
         processedStories.append(story)
 
     # Stories already loaded from the history are not rewritten to ti
-    writeToHistoryFile(list(filter(lambda s: s.loadedFromHist is False, processedStories)))
+    history.appendToHistory(list(filter(lambda s: s.loadedFromHist is False, processedStories)))
 
     return processedStories
 
 
 def fetchSingleStory(storyID):
+    """ Fetch a story from the hn api and return a stry object """
+
     itemResponse = requests.get(f'{itemBaseURL}/{storyID}/.json')
     json = itemResponse.json()
 
@@ -113,14 +83,13 @@ async def fetchTopStoriesParallel():
     resp = requests.get(topStories)
     itemIDs = resp.json()
 
-    history = loadFromHistoryFile()
     with ThreadPoolExecutor(max_workers=10) as excutor:
         loop = asyncio.get_event_loop()
 
         processedStories = []
         tasks = []
         for storyID in itemIDs[:config.n]:
-            storyFromHistory = getStoryFromHistory(storyID, history)
+            storyFromHistory = history.getStory(storyID)
 
             if storyFromHistory is not None:
                 processedStories.append(storyFromHistory)
@@ -137,62 +106,7 @@ async def fetchTopStoriesParallel():
         for story in await asyncio.gather(*tasks):
             processedStories.append(story)
 
-        writeToHistoryFile(list(filter(lambda s: s.loadedFromHist is False, processedStories)))
-
         return processedStories
-
-
-def getStoryFromHistory(storyID: int, history):
-    """ Fetches a specific story from the history. Returns None if not found """
-
-    for h in history:
-        if h.id == storyID:
-            return h
-
-    return None
-
-
-def isStoryInHistory(storyID, history):
-    for h in history:
-        if h["id"] == storyID:
-            return True
-
-    return False
-
-
-# Loads stories from the history file.
-# Returns a list of story objects
-def loadFromHistoryFile():
-    """ Loads all stories from the history file """
-
-    loadedStories = []
-    with open(histFilePath, 'r') as historyFile:
-        for line in historyFile:
-            stripped = line.strip('\n ')
-            if stripped == "":
-                continue
-
-            tokens = line.split(";")
-            if len(tokens) != 4:
-                print(f'Error reading line in historyFile')
-
-            story = Story(url=tokens[2].rstrip(),
-                          loadedFromHist=True,
-                          id=int(tokens[0]),
-                          title=tokens[1],
-                          openCount=int(tokens[3]))
-
-            loadedStories.append(story)
-
-    return loadedStories
-
-
-def writeToHistoryFile(stories):
-    """ Appends the passed list of stories to a file concverting ist fields into csv format """
-
-    with open(histFilePath, 'a') as historyFile:
-        for story in stories:
-            historyFile.write(f'{story.id};{story.title};{story.url};{story.openCount}\n')
 
 
 # fetch the story with passed id and open its url in the browser
@@ -202,33 +116,18 @@ def openInBrowser(itemID: int):
         Tries to first load the story from the history. If not present in
         history, will reach out to the hn service
     """
-    storiesFromHistory = loadFromHistoryFile()
     urlToLoad = ""
-    story = getStoryFromHistory(itemID, storiesFromHistory)
+    story = history.getStory(itemID)
     if story is None:
         item = fetchStory(itemID)
         urlToLoad = item.url
     else:
         urlToLoad = story.url
-        incrementOpenCountInHistory(story.id)
+        history.incrementOpenCountInHistory(story.id)
 
     print(urlToLoad)
     webbrowser.open_new_tab(urlToLoad)
     exitPeacefully()
-
-
-def overwriteHistoryFile(stories):
-    """ Replaces the history file with the passed stories """
-    with open(histFilePath, 'w') as historyFile:
-        for story in stories:
-            historyFile.write(f'{story.id};{story.title};{story.url};{story.openCount}\n')
-
-
-def incrementOpenCountInHistory(storyID: int):
-    stories = loadFromHistoryFile()
-    story = getStoryFromHistory(storyID, stories)
-    story.openCount = story.openCount + 1
-    overwriteHistoryFile(stories)
 
 
 def printStoriesWithRich(stories, cons):
@@ -249,6 +148,8 @@ if len(options) == 0:
 
     stories = future.result()
 
+    history.appendToHistory(list(filter(lambda s: s.loadedFromHist is False, stories)))
+
     cons = Console()
     for story in stories:
         color = "green" if story.loadedFromHist is True else "magenta"
@@ -268,6 +169,4 @@ if command == "open":
 elif command == "lh":
     cons = Console()
     cons.print(Markdown("## From History"))
-    stories = loadFromHistoryFile()
-    printStoriesWithRich(stories[:config.n], cons)
-
+    printStoriesWithRich(history.stories[:config.n], cons)
