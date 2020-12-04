@@ -4,6 +4,10 @@ import sys
 import os
 import requests
 import webbrowser
+import asyncio
+
+from concurrent.futures import ThreadPoolExecutor
+
 from rich.console import Console
 from rich.text import Text
 from rich.markdown import Markdown
@@ -91,6 +95,49 @@ def fetchTopStories(fetchHistory):
     writeToHistoryFile(list(filter(lambda s: s.loadedFromHist is False, processedStories)))
 
     return processedStories
+
+
+def fetchSingleStory(storyID):
+    itemResponse = requests.get(f'{itemBaseURL}/{storyID}/.json')
+    json = itemResponse.json()
+
+    story = Story(title=json["title"], loadedFromHist=False, id=json["id"])
+
+    if "url" in json:
+        story.url = json["url"]
+
+    return story
+
+
+async def fetchTopStoriesParallel():
+    resp = requests.get(topStories)
+    itemIDs = resp.json()
+
+    history = loadFromHistoryFile()
+    with ThreadPoolExecutor(max_workers=10) as excutor:
+        loop = asyncio.get_event_loop()
+
+        processedStories = []
+        tasks = []
+        for storyID in itemIDs[:config.n]:
+            storyFromHistory = getStoryFromHistory(storyID, history)
+
+            if storyFromHistory is not None:
+                processedStories.append(storyFromHistory)
+                continue
+
+            tasks.append(
+                loop.run_in_executor(
+                    excutor,
+                    fetchSingleStory,
+                    storyID
+                )
+            )
+
+        for story in await asyncio.gather(*tasks):
+            processedStories.append(story)
+
+        return processedStories
 
 
 def getStoryFromHistory(storyID: int, history):
@@ -194,7 +241,12 @@ def printStoriesWithRich(stories, cons):
 
 
 if len(options) == 0:
-    stories = fetchTopStories(loadFromHistoryFile())
+    loop = asyncio.get_event_loop()
+    future = asyncio.ensure_future(fetchTopStoriesParallel())
+    loop.run_until_complete(future)
+
+    stories = future.result()
+
     cons = Console()
     for story in stories:
         color = "green" if story.loadedFromHist is True else "magenta"
