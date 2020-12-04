@@ -4,6 +4,7 @@ import sys
 import requests
 import webbrowser
 import asyncio
+from optparse import OptionParser
 
 from concurrent.futures import ThreadPoolExecutor
 
@@ -16,16 +17,27 @@ from history import History
 from story import Story
 
 
-options = sys.argv[1:]
+parser = OptionParser()
+# parser.add_option("-H", "--no-hist", action="store_false", dest="useHist", default=True, help="Do not use the history when fetching stories. E.g. always talk to the api and dont write fetched stries to the history")
+parser.add_option("-c", "--open-cnt", dest="openCount", action="store_true", default=False, help="Print the open count for fetched stories")
+parser.add_option("-n", "--story-count", type="int", default=20, dest="storyCount", help="Set how many stories should be fetched. Defaults to 20")
+
+(options, args) = parser.parse_args()
 
 topStories = " https://hacker-news.firebaseio.com/v0/topstories.json?print=pretty"
 itemBaseURL = " https://hacker-news.firebaseio.com/v0/item/"
 
 history = History(config)
 
+STORY_COUNT=options.storyCount
+SHOW_OPENCOUNT=options.openCount
 
 def exitPeacefully():
     sys.exit(0)
+
+
+def exitAngrily():
+    sys.exit(1)
 
 
 def fetchStory(id):
@@ -41,7 +53,7 @@ def fetchTopStories(fetchHistory):
 
     itemIDs = resp.json()
 
-    idsToProcess = itemIDs[:config.n]
+    idsToProcess = itemIDs[:STORY_COUNT]
     processedStories = []
     for itemID in idsToProcess:
         storyFromHistory = history.getStory(itemID)
@@ -88,7 +100,7 @@ async def fetchTopStoriesParallel():
 
         processedStories = []
         tasks = []
-        for storyID in itemIDs[:config.n]:
+        for storyID in itemIDs[:STORY_COUNT]:
             storyFromHistory = history.getStory(storyID)
 
             if storyFromHistory is not None:
@@ -135,13 +147,15 @@ def printStoriesWithRich(stories, cons):
         color = "green" if story.loadedFromHist is True else "magenta"
         text = Text(str(story.id), style=color)
         if story.url is not "":
-            text = text.append(" \U0001f517")
+            text.append(" \U0001f517")
+            if SHOW_OPENCOUNT:
+                text.append(f' ({story.openCount})', style="bright_black")
         text.append(f' {story.title}', style="yellow")
 
         cons.print(text)
 
 
-if len(options) == 0:
+if len(args) == 0:
     loop = asyncio.get_event_loop()
     future = asyncio.ensure_future(fetchTopStoriesParallel())
     loop.run_until_complete(future)
@@ -151,21 +165,18 @@ if len(options) == 0:
     history.appendToHistory(list(filter(lambda s: s.loadedFromHist is False, stories)))
 
     cons = Console()
-    for story in stories:
-        color = "green" if story.loadedFromHist is True else "magenta"
-        text = Text(str(story.id), style=color)
-        if story.url is not "":
-            text = text.append(" \U0001f517")
-        text.append(f' {story.title}', style="yellow")
-
-        cons.print(text)
+    printStoriesWithRich(stories, cons)
 
     exitPeacefully()
 
-command = options[0]
+command = args[0]
 
 if command == "open":
-    openInBrowser(int(options[1]))
+    if len(args) < 2:
+        print(f'no story ID provided to open in browser')
+        exitAngrily()
+
+    openInBrowser(int(args[1]))
 elif command == "lh":
     cons = Console()
     cons.print(Markdown("## From History"))
