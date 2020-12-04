@@ -137,6 +137,8 @@ async def fetchTopStoriesParallel():
         for story in await asyncio.gather(*tasks):
             processedStories.append(story)
 
+        writeToHistoryFile(list(filter(lambda s: s.loadedFromHist is False, processedStories)))
+
         return processedStories
 
 
