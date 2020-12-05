@@ -11,6 +11,7 @@ from concurrent.futures import ThreadPoolExecutor
 from rich.console import Console
 from rich.text import Text
 from rich.markdown import Markdown
+from rich.padding import Padding
 
 from hnconfig import config
 from history import History
@@ -21,6 +22,7 @@ parser = OptionParser()
 # parser.add_option("-H", "--no-hist", action="store_false", dest="useHist", default=True, help="Do not use the history when fetching stories. E.g. always talk to the api and dont write fetched stries to the history")
 parser.add_option("-c", "--open-cnt", dest="openCount", action="store_true", default=False, help="Print the open count for fetched stories")
 parser.add_option("-n", "--story-count", type="int", default=20, dest="storyCount", help="Set how many stories should be fetched. Defaults to 20")
+parser.add_option("-q", "--quiet", action="store_true", default=False, dest="quiet", help="Only print program output")
 
 (options, args) = parser.parse_args()
 
@@ -31,6 +33,7 @@ history = History(config)
 
 STORY_COUNT=options.storyCount
 SHOW_OPENCOUNT=options.openCount
+
 
 def exitPeacefully():
     sys.exit(0)
@@ -153,6 +156,10 @@ def printStoriesWithRich(stories, cons):
         text.append(f' {story.title}', style="yellow")
 
         cons.print(text)
+
+    if (options.quiet is False):
+        errCons = Console(file=sys.stderr)
+        errCons.print(Padding(Markdown("To  open a stpry in the browser invoke `hn.py open [stpryID]`"), 1))
 
 
 if len(args) == 0:
