@@ -31,10 +31,10 @@ topStories = " https://hacker-news.firebaseio.com/v0/topstories.json?print=prett
 itemBaseURL = " https://hacker-news.firebaseio.com/v0/item/"
 
 history = History(config)
-readLater = ReadLater()
+readLater = ReadLater(config)
 
-STORY_COUNT=options.storyCount
-SHOW_OPENCOUNT=options.openCount
+STORY_COUNT = options.storyCount
+SHOW_OPENCOUNT = options.openCount
 
 
 def exitPeacefully():
@@ -191,5 +191,10 @@ elif command == "lh":
     cons.print(Markdown("## From History"))
     printStoriesWithRich(history.stories[:config.n], cons)
 elif command == 'rl':
-    # Argument is the story I want to read later
-    storeInReadLaterFile(int(args[1]))
+    if len(args) < 2:
+        print(f'No story id provided to store for reading later')
+        exitAngrily()
+
+    # Argument is the story ID I want to read later
+    story = history.getStory(int(args[1]))
+    readLater.addToReadLater(story)
