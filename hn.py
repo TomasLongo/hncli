@@ -13,6 +13,7 @@ from rich.text import Text
 from rich.markdown import Markdown
 from rich.padding import Padding
 
+from readlater import ReadLater
 from hnconfig import config
 from history import History
 from story import Story
@@ -30,6 +31,7 @@ topStories = " https://hacker-news.firebaseio.com/v0/topstories.json?print=prett
 itemBaseURL = " https://hacker-news.firebaseio.com/v0/item/"
 
 history = History(config)
+readLater = ReadLater()
 
 STORY_COUNT=options.storyCount
 SHOW_OPENCOUNT=options.openCount
@@ -188,3 +190,6 @@ elif command == "lh":
     cons = Console()
     cons.print(Markdown("## From History"))
     printStoriesWithRich(history.stories[:config.n], cons)
+elif command == 'rl':
+    # Argument is the story I want to read later
+    storeInReadLaterFile(int(args[1]))

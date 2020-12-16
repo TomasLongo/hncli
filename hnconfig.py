@@ -7,6 +7,7 @@ class HnConfig:
 
     # absolute path to historyfile
     histfile: str = "~/hnclient/stories.history"
+    readLaterFile: str = "~/hnclient/readlater"
 
 
 config = HnConfig()
