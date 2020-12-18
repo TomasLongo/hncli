@@ -30,6 +30,20 @@ The history file will track how many times a story has been opened in the browse
 
 `hn.py lh` shows the last n history entries
 
+### Mark stories for later reading
+
+Often enough we find articles that catch our attention but which we can not read yet. To store interesting stories for later reading use the `rl` command. Just like the `open` command it takes a story id and will store an entry into a separate file.
+
+```shell
+hn rl 123456
+```
+
+To view the complete list of stored stories invoke `rl` wihtout parameters
+
+To prevent an endlessly growing list of read-later-items, hn will delete the file holding the items after a configurable amount of days. The idea behind this feature: Not coming back to the list means the items in there have not been interesting enough.
+
+You can tweak the TTL to your needs with the `rlTTL` field inside `hnconfig.py`. To disable the feature set a TTL of `0`
+
 ## Inner life
 
 The script fetches top stories in two steps from the api:

@@ -10,5 +10,6 @@ class HnConfig:
     showOpenCount: bool = False
     quiet: bool = False
     debug: bool = False
+    rlTTL: int = 2
 
 config = HnConfig()
