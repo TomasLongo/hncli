@@ -23,19 +23,37 @@ parser = OptionParser()
 # parser.add_option("-H", "--no-hist", action="store_false", dest="useHist", default=True, help="Do not use the history when fetching stories. E.g. always talk to the api and dont write fetched stries to the history")
 parser.add_option("-c", "--open-cnt", dest="openCount", action="store_true", default=False, help="Print the open count for fetched stories")
 parser.add_option("-n", "--story-count", type="int", default=20, dest="storyCount", help="Set how many stories should be fetched. Defaults to 20")
-parser.add_option("-q", "--quiet", action="store_true", default=False, dest="quiet", help="Only print program output")
+
+parser.add_option("-q",
+                  "--quiet",
+                  action="store_true",
+                  default=False,
+                  dest="quiet",
+                  help="Only print program output")
+
+parser.add_option("-x",
+                  "--debug",
+                  action="store_true",
+                  default=False,
+                  dest="debug",
+                  help="Print additional debug output on std error")
 
 (options, args) = parser.parse_args()
 
 topStories = " https://hacker-news.firebaseio.com/v0/topstories.json?print=pretty"
 itemBaseURL = " https://hacker-news.firebaseio.com/v0/item/"
 
-history = History(config)
-readLater = ReadLater(config)
-
 STORY_COUNT = options.storyCount
 SHOW_OPENCOUNT = options.openCount
+QUIET = options.quiet
 
+config.n=options.storyCount
+config.showOpenCount=options.openCount
+config.quiet=options.quiet
+config.debug=options.debug
+
+history = History(config)
+readLater = ReadLater(config)
 
 def exitPeacefully():
     sys.exit(0)
@@ -151,7 +169,7 @@ def printStoriesWithRich(stories, cons):
     for story in stories:
         color = "green" if story.loadedFromHist is True else "magenta"
         text = Text(str(story.id), style=color)
-        if story.url is not "":
+        if story.url != "":
             text.append(" \U0001f517")
             if SHOW_OPENCOUNT:
                 text.append(f' ({story.openCount})', style="bright_black")
@@ -161,7 +179,25 @@ def printStoriesWithRich(stories, cons):
 
     if (options.quiet is False):
         errCons = Console(file=sys.stderr)
-        errCons.print(Padding(Markdown("To  open a stpry in the browser invoke `hn.py open [stpryID]`"), 1))
+        errCons.print(Padding(Markdown("To open a story in the browser invoke `hn.py open [storyID]`"), (1, 0, 0, 0)))
+        errCons.print(Markdown("To save a story for later reading invoke `hn.py rl [storyID]`"))
+
+
+def printReadLaterStoriesWithRich(stories, cons):
+    for story in stories:
+        color = "green" if story.loadedFromHist is True else "magenta"
+        text = Text(str(story.id), style=color)
+        if story.url != "":
+            text.append(" \U0001f517")
+            if SHOW_OPENCOUNT:
+                text.append(f' ({story.openCount})', style="bright_black")
+        text.append(f' {story.title}', style="yellow")
+
+        cons.print(text)
+
+    if (options.quiet is False):
+        errCons = Console(file=sys.stderr)
+        errCons.print(Padding(Markdown("To open a story in the browser invoke `hn.py open [stpryID]`"), (1, 0, 0, 0)))
 
 
 if len(args) == 0:
@@ -192,9 +228,11 @@ elif command == "lh":
     printStoriesWithRich(history.stories[:config.n], cons)
 elif command == 'rl':
     if len(args) < 2:
-        print(f'No story id provided to store for reading later')
-        exitAngrily()
-
-    # Argument is the story ID I want to read later
-    story = history.getStory(int(args[1]))
-    readLater.addToReadLater(story)
+        cons = Console()
+        cons.print(Markdown("## Stored for later reading"))
+        stories = readLater.getReadLaterItems()
+        printReadLaterStoriesWithRich(stories, cons)
+    else:
+        # Argument is the story ID I want to read later
+        story = history.getStory(int(args[1]))
+        readLater.addToReadLater(story)
