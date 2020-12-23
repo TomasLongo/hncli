@@ -36,9 +36,9 @@ class ReadLater:
         else:
             creationTime = datetime.date.fromtimestamp(os.stat(pathToReadLaterFile).st_birthtime)
             today = datetime.date.today()
-            expiration = creationTime + datetime.timedelta(days=1)
+            expiration = creationTime + datetime.timedelta(days=config.rlTTL)
             if (today > expiration):
-                logDebug('read later is older than 1d')
+                logDebug(f'read later is older than {config.rlTTL}d')
             else:
                 logDebug('read later is still fresh')
 

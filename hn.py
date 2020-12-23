@@ -14,15 +14,34 @@ from rich.markdown import Markdown
 from rich.padding import Padding
 
 from readlater import ReadLater
-from hnconfig import config
-from history import History
+from hnconfig import HnConfig
+from history import History, NoOpHistory
 from story import Story
+from logger import init as logInit
 
 
 parser = OptionParser()
-# parser.add_option("-H", "--no-hist", action="store_false", dest="useHist", default=True, help="Do not use the history when fetching stories. E.g. always talk to the api and dont write fetched stries to the history")
-parser.add_option("-c", "--open-cnt", dest="openCount", action="store_true", default=False, help="Print the open count for fetched stories")
-parser.add_option("-n", "--story-count", type="int", default=20, dest="storyCount", help="Set how many stories should be fetched. Defaults to 20")
+
+parser.add_option("-H",
+                  "--no-hist",
+                  action="store_false",
+                  dest="useHist",
+                  default=True,
+                  help="Do not use the history when fetching stories. E.g. always talk to the api and dont write fetched stries to the history")
+
+parser.add_option("-c",
+                  "--open-cnt",
+                  dest="openCount",
+                  action="store_true",
+                  default=False,
+                  help="Print the open count for fetched stories")
+
+parser.add_option("-n",
+                  "--story-count",
+                  type="int",
+                  default=20,
+                  dest="storyCount",
+                  help="Set how many stories should be fetched. Defaults to 20")
 
 parser.add_option("-q",
                   "--quiet",
@@ -38,7 +57,14 @@ parser.add_option("-x",
                   dest="debug",
                   help="Print additional debug output on std error")
 
+parser.add_option("-T",
+                  "--ttl",
+                  default=2,
+                  dest="rlTTL",
+                  help="Set expiration of the read later file")
+
 (options, args) = parser.parse_args()
+
 
 topStories = " https://hacker-news.firebaseio.com/v0/topstories.json?print=pretty"
 itemBaseURL = " https://hacker-news.firebaseio.com/v0/item/"
@@ -47,13 +73,11 @@ STORY_COUNT = options.storyCount
 SHOW_OPENCOUNT = options.openCount
 QUIET = options.quiet
 
-config.n=options.storyCount
-config.showOpenCount=options.openCount
-config.quiet=options.quiet
-config.debug=options.debug
+config = HnConfig(options)
+logInit(config)
 
-history = History(config)
-readLater = ReadLater(config)
+history = History(config) if options.useHist is True else NoOpHistory()
+
 
 def exitPeacefully():
     sys.exit(0)
@@ -203,13 +227,15 @@ def printReadLaterStoriesWithRich(stories, cons):
 if len(args) == 0:
     loop = asyncio.get_event_loop()
     future = asyncio.ensure_future(fetchTopStoriesParallel())
-    loop.run_until_complete(future)
+
+    cons = Console()
+    with cons.status("[bold white] Downloading stories...") as s:
+        loop.run_until_complete(future)
 
     stories = future.result()
 
     history.appendToHistory(list(filter(lambda s: s.loadedFromHist is False, stories)))
 
-    cons = Console()
     printStoriesWithRich(stories, cons)
 
     exitPeacefully()
@@ -227,6 +253,7 @@ elif command == "lh":
     cons.print(Markdown("## From History"))
     printStoriesWithRich(history.stories[:config.n], cons)
 elif command == 'rl':
+    readLater = ReadLater(config)
     if len(args) < 2:
         cons = Console()
         cons.print(Markdown("## Stored for later reading"))

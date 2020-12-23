@@ -1,7 +1,15 @@
 from dataclasses import dataclass
 
+
 @dataclass
 class HnConfig:
+    def __init__(self, cliOptions):
+        self.n = cliOptions.storyCount
+        self.showOpenCount = cliOptions.openCount
+        self.quiet = cliOptions.quiet
+        self.debug = cliOptions.debug
+        self.rlTTL = cliOptions.rlTTL
+
     n: int = 20
 
     # absolute path to historyfile
@@ -10,5 +18,4 @@ class HnConfig:
     showOpenCount: bool = False
     quiet: bool = False
     debug: bool = False
-
-config = HnConfig()
+    rlTTL: int = 2

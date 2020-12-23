@@ -1,6 +1,10 @@
 import sys
 
-from hnconfig import config
+config = None
+
+def init(conf):
+    global config
+    config = conf
 
 
 def logInfo(msg: str):

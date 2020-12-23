@@ -100,3 +100,17 @@ class History:
                 return h
 
         return None
+
+
+class NoOpHistory:
+    def getStory(self, story):
+        return None
+
+    def isStoryInHistory(self, storyID):
+        return False
+
+    def appendToHistory(self, stories):
+        pass
+
+    def incrementOpenCountInHistory(self, storyID):
+        pass
