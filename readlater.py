@@ -39,6 +39,9 @@ class ReadLater:
             expiration = creationTime + datetime.timedelta(days=config.rlTTL)
             if (today > expiration):
                 logDebug(f'read later is older than {config.rlTTL}d')
+                os.remove(pathToReadLaterFile)
+                hf = open(pathToReadLaterFile, 'w')
+                hf.close()
             else:
                 logDebug('read later is still fresh')
 
