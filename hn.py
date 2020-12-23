@@ -201,7 +201,7 @@ def printStoriesWithRich(stories, cons):
 
         cons.print(text)
 
-    if (options.quiet is False):
+    if (options.quiet is not True):
         errCons = Console(file=sys.stderr)
         errCons.print(Padding(Markdown("To open a story in the browser invoke `hn.py open [storyID]`"), (1, 0, 0, 0)))
         errCons.print(Markdown("To save a story for later reading invoke `hn.py rl [storyID]`"))
@@ -209,7 +209,7 @@ def printStoriesWithRich(stories, cons):
 
 def printReadLaterStoriesWithRich(stories, cons):
     for story in stories:
-        color = "green" if story.loadedFromHist is True else "magenta"
+        color = "white"
         text = Text(str(story.id), style=color)
         if story.url != "":
             text.append(" \U0001f517")
@@ -219,7 +219,7 @@ def printReadLaterStoriesWithRich(stories, cons):
 
         cons.print(text)
 
-    if (options.quiet is False):
+    if (options.quiet is not True):
         errCons = Console(file=sys.stderr)
         errCons.print(Padding(Markdown("To open a story in the browser invoke `hn.py open [stpryID]`"), (1, 0, 0, 0)))
 

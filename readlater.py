@@ -33,7 +33,7 @@ class ReadLater:
                 print(f'creating read later file under {pathToReadLaterFile}', file=sys.stderr)
                 hf = open(pathToReadLaterFile, 'w')
                 hf.close()
-        else:
+        elif config.rlTTL > 0:
             creationTime = datetime.date.fromtimestamp(os.stat(pathToReadLaterFile).st_birthtime)
             today = datetime.date.today()
             expiration = creationTime + datetime.timedelta(days=config.rlTTL)
