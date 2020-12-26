@@ -4,6 +4,7 @@ import sys
 import requests
 import webbrowser
 import asyncio
+import datetime
 from optparse import OptionParser
 
 from concurrent.futures import ThreadPoolExecutor
@@ -256,7 +257,7 @@ elif command == 'rl':
     readLater = ReadLater(config)
     if len(args) < 2:
         cons = Console()
-        cons.print(Markdown("## Stored for later reading"))
+        cons.print(Markdown(f'## Stored for later reading (expires at {readLater.getExpirationDate()})'))
         stories = readLater.getReadLaterItems()
         printReadLaterStoriesWithRich(stories, cons)
     else:

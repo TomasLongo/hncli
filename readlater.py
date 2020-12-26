@@ -9,6 +9,7 @@ from logger import logDebug
 class ReadLater:
     def __init__(self, config):
         self.readLaterFile = self._checkLaterfileAndCreateIfNeccessary(config)
+        self.expirationDate = self._calculateExpirationDate(self.readLaterFile, config.rlTTL)
 
     def _checkLaterfileAndCreateIfNeccessary(self, config):
         """
@@ -34,18 +35,24 @@ class ReadLater:
                 hf = open(pathToReadLaterFile, 'w')
                 hf.close()
         elif config.rlTTL > 0:
-            creationTime = datetime.date.fromtimestamp(os.stat(pathToReadLaterFile).st_birthtime)
+            expiration = self._calculateExpirationDate(pathToReadLaterFile, config.rlTTL)
             today = datetime.date.today()
-            expiration = creationTime + datetime.timedelta(days=config.rlTTL)
             if (today > expiration):
                 logDebug(f'read later is older than {config.rlTTL}d')
-                os.remove(pathToReadLaterFile)
-                hf = open(pathToReadLaterFile, 'w')
-                hf.close()
+                #os.remove(pathToReadLaterFile)
+                #hf = open(pathToReadLaterFile, 'w')
+                #hf.close()
             else:
                 logDebug('read later is still fresh')
 
         return pathToReadLaterFile
+
+    def _calculateExpirationDate(self, pathToReadLaterFile, ttl):
+        creationTime = datetime.date.fromtimestamp(os.stat(pathToReadLaterFile).st_birthtime)
+        return creationTime + datetime.timedelta(days=ttl)
+
+    def getExpirationDate(self):
+        return self.expirationDate
 
     # StoryID und wir ziehen es uns aus der History. Oder wir
     # geben die Story hier komplett rein. --> Keine Abhängigkeit zu externem
