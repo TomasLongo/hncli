@@ -60,7 +60,7 @@ class ReadLater:
     def addToReadLater(self, story):
         print(f'Adding {story.id} to read later', file=sys.stderr)
         with open(self.readLaterFile, 'a') as readLaterFile:
-            readLaterFile.write(f'{story.id};{story.title};{story.url}')
+            readLaterFile.write(f'{story.id};{story.title};{story.url}\n')
 
     def getReadLaterItems(self):
         """ Returns a list of all items that were marked for later reading """
