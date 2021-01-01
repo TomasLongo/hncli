@@ -19,6 +19,7 @@ from hnconfig import HnConfig
 from history import History, NoOpHistory
 from story import Story
 from logger import init as logInit
+from logger import logDebug
 
 
 parser = OptionParser()
@@ -192,8 +193,12 @@ def openInBrowser(itemID: int):
 
 def printStoriesWithRich(stories, cons):
     for story in stories:
+        text = Text()
+        if (story.starred is True):
+            text.append("\U0001F31F ")
+
         color = "green" if story.loadedFromHist is True else "magenta"
-        text = Text(str(story.id), style=color)
+        text.append(str(story.id), style=color)
         if story.url != "":
             text.append(" \U0001f517")
             if SHOW_OPENCOUNT:
@@ -206,6 +211,8 @@ def printStoriesWithRich(stories, cons):
         errCons = Console(file=sys.stderr)
         errCons.print(Padding(Markdown("To open a story in the browser invoke `hn.py open [storyID]`"), (1, 0, 0, 0)))
         errCons.print(Markdown("To save a story for later reading invoke `hn.py rl [storyID]`"))
+
+# Unicode: U+2B50 U+FE0F, UTF-8: E2 AD 90 EF B8 8F
 
 
 def printReadLaterStoriesWithRich(stories, cons):
@@ -264,3 +271,15 @@ elif command == 'rl':
         # Argument is the story ID I want to read later
         story = history.getStory(int(args[1]))
         readLater.addToReadLater(story)
+elif command == 'star':
+    if len(args) < 2:
+        print(f'no story ID provided')
+        exitAngrily()
+    storyToStar = history.getStory(int(args[1]))
+    if storyToStar is None:
+        logDebug('Could not find story in history')
+        exitAngrily()
+
+    storyToStar.starred = True
+    history.updateStoryInHistory(storyToStar)
+
