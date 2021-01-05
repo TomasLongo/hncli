@@ -31,17 +31,18 @@ class ReadLater:
             except FileExistsError:
                 print(f'{path} already exists', file=sys.stderr)
             finally:
-                print(f'creating read later file under {pathToReadLaterFile}', file=sys.stderr)
+                print(f'creating read later file under {pathToReadLaterFile}',
+                      file=sys.stderr)
                 hf = open(pathToReadLaterFile, 'w')
                 hf.close()
         elif config.rlTTL > 0:
             expiration = self._calculateExpirationDate(pathToReadLaterFile, config.rlTTL)
             today = datetime.date.today()
             if (today > expiration):
-                logDebug(f'read later is older than {config.rlTTL}d')
-                #os.remove(pathToReadLaterFile)
-                #hf = open(pathToReadLaterFile, 'w')
-                #hf.close()
+                logDebug(f'read later is older than {config.rlTTL}d. Deleting it')
+                os.remove(pathToReadLaterFile)
+                hf = open(pathToReadLaterFile, 'w')
+                hf.close()
             else:
                 logDebug('read later is still fresh')
 
